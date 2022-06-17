@@ -10,112 +10,66 @@ import renderGallery from './js/render';
 
 import ImagesService from './js/fetchApi';
 
+import LoadMoreBtn from './js/components/buttonAddImages';
+
 const refs = {
   form: document.querySelector('#search-form'),
   gallery: document.querySelector('.gallery'),
 };
 
-refs.form.addEventListener('submit', onFormSubmit);
-
+// const lightBox =
 const imagesService = new ImagesService();
+const loadMoreBtn = new LoadMoreBtn({
+  selector: '[data-action="load-more"]',
+});
+const lightBox = new SimpleLightbox('.gallery div a', {
+  captionDelay: 250,
+  captionsData: 'alt',
+});
+
+refs.form.addEventListener('submit', onFormSubmit);
+loadMoreBtn.refs.button.addEventListener('click', fetchImage);
+
+loadMoreBtn.hide();
 
 function onFormSubmit(event) {
   event.preventDefault();
 
   imagesService.query = event.currentTarget.elements.searchQuery.value;
-  console.log(imagesService.query);
 
   imagesService.resetPage();
   clearGalleryContainer();
+  loadMoreBtn.hide();
   fetchImage();
-
-  new SimpleLightbox('.gallery a', {
-    captionDelay: 250,
-  });
-
-  //   loadMoreBtn.show();
-
-  //   clearGalleryContainer();
-
-  //   fetchArticles();
-
-  //   refs.gallery.innerHTML = renderGallery();
 }
 
 function fetchImage() {
-  imagesService.fetchImageCards().then(({ hits, totalHits }) => {
-    console.log(hits);
-    if (hits.length === 0) {
-      return Notiflix.Notify.failure(
-        'Sorry, there are no images matching your search query. Please try again.',
-      );
-    }
-    Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`);
-    appendArticleMarkup(hits);
-  });
+  imagesService
+    .fetchImageCards()
+    .then(result => {
+      const {
+        config: {
+          params: { page, per_page },
+        },
+        data: { hits, totalHits },
+      } = result;
+
+      appendArticleMarkup(hits);
+      loadMoreBtn.show();
+
+      if (totalHits <= page * per_page) {
+        loadMoreBtn.hide();
+        Notiflix.Notify.warning(`We're sorry, but you've reached the end of search results.`);
+      }
+    })
+    .catch(error => error);
 }
 
 function appendArticleMarkup(hits) {
   refs.gallery.insertAdjacentHTML('beforeend', renderGallery(hits));
+  lightBox.refresh();
 }
 
 function clearGalleryContainer() {
   refs.gallery.innerHTML = '';
 }
-
-// getImagesCollection().then(response => console.log(response.data.hits));
-
-// fetchUsersBtn.addEventListener('click', async () => {
-//   try {
-//     const users = await fetchUsers();
-//     renderUserListItems(users);
-//   } catch (error) {
-//     console.log(error.message);
-//   }
-// });
-
-// function fetchArticles() {
-//   //   loadMoreBtn.disable();
-//   imagesService.fetchImageCards().then(articles => {
-//     loadMoreBtn.enable();
-//     appendArticleMarkup(articles);
-//   });
-// }
-
-// const fetchUsersBtn = document.querySelector('.btn');
-// const userList = document.querySelector('.user-list');
-
-// fetchUsersBtn.addEventListener('click', async () => {
-//   try {
-//     const users = await fetchUsers();
-//     renderUserListItems(users);
-//   } catch (error) {
-//     console.log(error.message);
-//   }
-// });
-
-// async function fetchUsers() {
-//   const baseUrl = 'https://jsonplaceholder.typicode.com';
-//   const userIds = [1, 2, 3, 4, 5];
-
-//   const arrayOfPromises = userIds.map(async userId => {
-//     const response = await fetch(`${baseUrl}/users/${userId}`);
-//     return response.json();
-//   });
-
-//   const users = await Promise.all(arrayOfPromises);
-//   return users;
-// }
-
-// function renderUserListItems(users) {
-//   const markup = users
-//     .map(
-//       user => `<ul class="item">
-//         <p><b>Name</b>: ${user.name}</p>
-//         <p><b>Email</b>: ${user.email}</p>
-//         <p><b>Company</b>: ${user.company.name}</p>
-//       </ul>`,
-//     )
-//     .join('');
-//   userList.innerHTML = markup;
-// }

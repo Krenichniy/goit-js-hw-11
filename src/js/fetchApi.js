@@ -1,3 +1,4 @@
+import Notiflix from 'notiflix';
 const axios = require('axios');
 
 const BASE_URL = 'https://pixabay.com/api/';
@@ -38,28 +39,24 @@ export default class ImagesService {
 
     const url = `${BASE_URL}`;
 
-    return await axios.get(url, { params }).then(({ data: hits }) => {
+    return await axios.get(url, { params }).then(response => {
+      const { data } = response;
+
+      if (data.hits.length === 0) {
+        Notiflix.Notify.failure(
+          'Sorry, there are no images matching your search query. Please try again.',
+        );
+        throw new Error();
+      }
+
+      if (this.page === 1) {
+        Notiflix.Notify.success(`Hooray! We found ${data.totalHits} images.`);
+      }
       this.page += 1;
-      return hits;
+
+      return response;
     });
-    //   ).then(response => {
-    //   this.page += 1;
-    //   return response.data.hits;
-    // })
   }
-
-  //     async function fetchUsers() {
-  //   const baseUrl = 'https://jsonplaceholder.typicode.com';
-  //   const userIds = [1, 2, 3, 4, 5];
-
-  //   const arrayOfPromises = userIds.map(async userId => {
-  //     const response = await fetch(`${baseUrl}/users/${userId}`);
-  //     return response.json();
-  //   });
-
-  //   const users = await Promise.all(arrayOfPromises);
-  //   return users;
-  // }
 
   resetPage() {
     this.page = 1;
